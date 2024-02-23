@@ -1,6 +1,8 @@
 {
     "C_Cpp.codeAnalysis.clangTidy.enabled": true,
     "files.associations": {
-        "button.h": "c"
+        "button.h": "c",
+        "assert.h": "c",
+        "sampler.h": "c"
     }
 }

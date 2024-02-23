@@ -4,22 +4,20 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "periodTimer.h"
-#include "hal/button.h"
+#include "hal/sampler.h"
 
 int main()
 {
     printf("Hello world!\n");
 
     // Initialize all modules; HAL modules first
-    button_init();
 
     // Main program logic:
     for (int i = 0; i < 10; i++) {
-        printf("  -> Reading button time %d = %d\n", i, button_is_button_pressed());
+        printf("  -> Reading button time %d = %d\n", i, i);
     }
 
     // Cleanup all modules (HAL modules last)
-    button_cleanup();
 
     printf("!!! DONE !!!\n"); 
 
