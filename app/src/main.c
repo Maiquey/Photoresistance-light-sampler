@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-#include "badmath.h"
+#include "periodTimer.h"
 #include "hal/button.h"
 
 int main()
@@ -12,20 +12,13 @@ int main()
 
     // Initialize all modules; HAL modules first
     button_init();
-    badmath_init();
 
     // Main program logic:
     for (int i = 0; i < 10; i++) {
         printf("  -> Reading button time %d = %d\n", i, button_is_button_pressed());
     }
 
-    for (int i = 0; i <= 35; i++) {
-        int ans = badmath_factorial(i);
-        printf("%4d! = %6d\n", i, ans);
-    }
-
     // Cleanup all modules (HAL modules last)
-    badmath_cleanup();
     button_cleanup();
 
     printf("!!! DONE !!!\n"); 
