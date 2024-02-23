@@ -7,10 +7,22 @@
 
 #define NUM_SAMPLES 1000
 
+#define A2D_FILE_VOLTAGE1 "/sys/bus/iio/devices/iio:device0/in_voltage1_raw"
+#define A2D_VOLTAGE_REF_V 1.8
+#define A2D_MAX_READING 4095
+
 static int historyBuffer[NUM_SAMPLES] = {0};
 static int currentBuffer[NUM_SAMPLES] = {0};
 static bool is_initialized = false;
 static long long numSamplesTaken = 0;
+static int historySize = 0;
+static int currentSize = 0;
+
+static void sleepForMs(long long delayInMs);
+static void* sampleLightLevels(void* _arg);
+static int getVoltage1Reading();
+
+static pthread_t threads[1];
 
 // Begin/end the background thread which samples light levels.
 void Sampler_init(void)
@@ -19,6 +31,9 @@ void Sampler_init(void)
     is_initialized = true;
 
     //start the thread - will sample light level every 1ms
+    pthread_create(&threads[0], NULL, sampleLightLevels, NULL);
+    printf("init complete\n");
+    // pthread_join(*samplerThread, NULL);
 }
 
 void Sampler_cleanup(void)
@@ -80,7 +95,35 @@ static void sleepForMs(long long delayInMs)
     nanosleep(&reqDelay, (struct timespec *) NULL);
 }
 
-static void sampleLightLevels()
+static void* sampleLightLevels(void* _arg)
 {
+    while (numSamplesTaken < 10000){
+        int a2dReading = getVoltage1Reading();
+        numSamplesTaken++;
+        printf("%d\n", a2dReading);
+        sleepForMs(1);
+    }
+    pthread_exit(NULL);
+}
 
+// From A2D guide - to be modified for error handling
+static int getVoltage1Reading()
+{
+    // Open file
+    FILE *f = fopen(A2D_FILE_VOLTAGE1, "r");
+    if (!f) {
+        printf("ERROR: Unable to open voltage input file. Cape loaded?\n");
+        printf(" Check /boot/uEnv.txt for correct options.\n");
+        exit(-1);
+    }
+    // Get reading
+    int a2dReading = 0;
+    int itemsRead = fscanf(f, "%d", &a2dReading);
+    if (itemsRead <= 0) {
+    printf("ERROR: Unable to read values from voltage input file.\n");
+        exit(-1);
+    }
+    // Close file
+    fclose(f);
+    return a2dReading;
 }

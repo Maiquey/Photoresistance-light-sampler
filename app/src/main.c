@@ -3,19 +3,30 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <pthread.h>
 #include "periodTimer.h"
 #include "hal/sampler.h"
+
+pthread_mutex_t mutexMain;
+pthread_cond_t condVarFinished;
 
 int main()
 {
     printf("Hello world!\n");
+    
+    pthread_mutex_init(&mutexMain, NULL);
+    pthread_cond_init(&condVarFinished, NULL);
 
     // Initialize all modules; HAL modules first
 
     // Main program logic:
-    for (int i = 0; i < 10; i++) {
-        printf("  -> Reading button time %d = %d\n", i, i);
-    }
+    // for (int i = 0; i < 10; i++) {
+    //     printf("  -> Reading button time %d = %d\n", i, i);
+    // }
+    Sampler_init();
+    pthread_mutex_lock(&mutexMain);
+    pthread_cond_wait(&condVarFinished, &mutexMain);
+    pthread_mutex_unlock(&mutexMain);
 
     // Cleanup all modules (HAL modules last)
 
