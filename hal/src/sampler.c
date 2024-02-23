@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
+#include <string.h>
 
 #define NUM_SAMPLES 1000
 
@@ -19,16 +20,20 @@ static int historySize = 0;
 static int currentSize = 0;
 
 static void sleepForMs(long long delayInMs);
+static long long getTimeInMs(void);
 static void* sampleLightLevels(void* _arg);
 static int getVoltage1Reading();
 
 static pthread_t threads[1];
+static pthread_mutex_t mutexHistory;
 
 // Begin/end the background thread which samples light levels.
 void Sampler_init(void)
 {
     assert(!is_initialized);
     is_initialized = true;
+
+    pthread_mutex_init(&mutexHistory, NULL);
 
     //start the thread - will sample light level every 1ms
     pthread_create(&threads[0], NULL, sampleLightLevels, NULL);
@@ -42,6 +47,7 @@ void Sampler_cleanup(void)
     assert(is_initialized);
     is_initialized = false;
     //join thread
+    pthread_join(threads[0], NULL);
 }
 
 // Must be called once every 1s.
@@ -50,13 +56,19 @@ void Sampler_cleanup(void)
 void Sampler_moveCurrentDataToHistory(void)
 {
     assert(is_initialized);
+    pthread_mutex_lock(&mutexHistory);
+    memcpy(historyBuffer, currentBuffer, sizeof(int) * NUM_SAMPLES);
+    historySize = currentSize;
+    // printf("size of history = %d\n", historySize);
+    pthread_mutex_unlock(&mutexHistory);
+    currentSize = 0;
 }
 
 // Get the number of samples collected during the previous complete second.
 int Sampler_getHistorySize(void)
 {
     assert(is_initialized);
-    return 0;
+    return historySize;
 }
 
 // Get a copy of the samples in the sample history.
@@ -67,7 +79,11 @@ int Sampler_getHistorySize(void)
 double* Sampler_getHistory(int *size)
 {
     assert(is_initialized);
-    return 0;
+    pthread_mutex_lock(&mutexHistory);
+    double* historyCopy = (double*)malloc((*size) * sizeof(double));
+    memcpy(historyCopy, historyBuffer, sizeof(int) * (*size));
+    pthread_mutex_lock(&mutexHistory);
+    return historyCopy;
 }
 
 // Get the average light level (not tied to the history).
@@ -84,6 +100,7 @@ long long Sampler_getNumSamplesTaken(void)
     return numSamplesTaken;
 }
 
+//TODO - put in its own module
 static void sleepForMs(long long delayInMs)
 {
     const long long NS_PER_MS = 1000 * 1000;
@@ -97,10 +114,18 @@ static void sleepForMs(long long delayInMs)
 
 static void* sampleLightLevels(void* _arg)
 {
-    while (numSamplesTaken < 10000){
+    long long startTime = getTimeInMs();
+    while (1) {
+        long long currentTime = getTimeInMs();
+        if (currentTime - startTime >= 1000){
+            Sampler_moveCurrentDataToHistory();
+            startTime = currentTime;
+        }
         int a2dReading = getVoltage1Reading();
+        currentBuffer[currentSize] = a2dReading;
         numSamplesTaken++;
-        printf("%d\n", a2dReading);
+        currentSize++;
+        // printf("%d\n", a2dReading);
         sleepForMs(1);
     }
     pthread_exit(NULL);
@@ -126,4 +151,15 @@ static int getVoltage1Reading()
     // Close file
     fclose(f);
     return a2dReading;
+}
+
+//TODO - put in its own module
+static long long getTimeInMs(void){
+    struct timespec spec;
+    clock_gettime(CLOCK_REALTIME, &spec);
+    long long seconds = spec.tv_sec;
+    long long nanoSeconds = spec.tv_nsec;
+    long long milliSeconds = seconds * 1000
+    + nanoSeconds / 1000000;
+    return milliSeconds;
 }
