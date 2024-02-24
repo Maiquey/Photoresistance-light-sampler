@@ -12,6 +12,7 @@
 
 #define HELP_MSG "\nAccepted command examples:\ncount      -- get the total number of samples taken.\nlength     -- get the number of samples taken in the previously completed second.\ndips       -- get the number of dips in the previously completed second.\nhistory    -- get all the samples in the previously completed second.\nstop       -- cause the server program to end.\n<enter>    -- repeat last command.\n"
 #define MAX_LEN 1500
+#define MAX_LEN_HISTORY 1470
 #define PORT 12345
 
 static pthread_cond_t* mainCondVar;
@@ -23,7 +24,7 @@ static int socketDescriptor;
 static bool firstMessage = true;
 static char lastMessage[MAX_LEN];
 
-static pthread_t threads[1];
+static pthread_t threads[1]; //TODO - fix this (make it not in an array)
 // static pthread_mutex_t mutexHistory;
 
 static void* receiveData();
@@ -93,7 +94,7 @@ static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote
         snprintf(messageTx, MAX_LEN, "%d\n", Sampler_getHistorySize());
     }
     else if (strncmp(messageRx, "dips", strlen("dips")) == 0){
-        snprintf(messageTx, MAX_LEN, "unsupported command - dips\n");
+        snprintf(messageTx, MAX_LEN, "%d\n", 0);
     }
     else if (strncmp(messageRx, "history", strlen("history")) == 0){
         snprintf(messageTx, MAX_LEN, "unsupported command - history\n");
@@ -106,7 +107,7 @@ static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote
     }
 
     sendto(socketDescriptor, messageTx, strlen(messageTx), 0, (struct sockaddr*) &sinRemote, sin_len);
-    if (strcmp(messageRx, "stop\n") == 0){
+    if (strncmp(messageRx, "stop", strlen("stop")) == 0){
         printf("signalling main\n");
         pthread_cond_signal(mainCondVar);
         isRunning = false;

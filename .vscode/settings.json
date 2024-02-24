@@ -8,6 +8,7 @@
         "stdio.h": "c",
         "string.h": "c",
         "stdlib.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "pthread.h": "c"
     }
 }

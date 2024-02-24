@@ -15,6 +15,7 @@
 #define _SAMPLER_H_
 
 #include <stdbool.h>
+#include <pthread.h>
 
 // Begin/end the background thread which samples light levels.
 void Sampler_init(void);
@@ -33,12 +34,14 @@ int Sampler_getHistorySize(void);
 // number of elements in the returned array (output-only parameter).
 // The calling code must call free() on the returned pointer.
 // Note: It provides both data and size to ensure consistency.
-double* Sampler_getHistory(void);
+double* Sampler_getHistory(int* size);
 
 // Get the average light level (not tied to the history).
 double Sampler_getAverageReading(void);
 
 // Get the total number of light level samples taken so far.
 long long Sampler_getNumSamplesTaken(void);
+
+pthread_mutex_t* Sampler_getHistoryMutexRef(void);
 
 #endif
