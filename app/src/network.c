@@ -79,27 +79,26 @@ static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote
 {
     char messageTx[MAX_LEN];
 
-    //TODO fix repeated command
     if (!firstMessage && bytesRx == 1 && messageRx[0]){
         messageRx = lastMessage;
     }
-    // Generated with help from chatGPT for efficiency
-    if (strcmp(messageRx, "help\n") == 0 || strcmp(messageRx, "?\n") == 0){
+    // Generated with some help from chatGPT for efficiency
+    if (strncmp(messageRx, "help", strlen("help")) == 0 || strncmp(messageRx, "?", strlen("?")) == 0){
         snprintf(messageTx, MAX_LEN, HELP_MSG);
     }
-    else if (strcmp(messageRx, "count\n") == 0){
+    else if (strncmp(messageRx, "count", strlen("count")) == 0){
         snprintf(messageTx, MAX_LEN, "%lld\n", Sampler_getNumSamplesTaken());
     }
-    else if (strcmp(messageRx, "length\n") == 0){
+    else if (strncmp(messageRx, "length", strlen("length")) == 0){
         snprintf(messageTx, MAX_LEN, "%d\n", Sampler_getHistorySize());
     }
-    else if (strcmp(messageRx, "dips\n") == 0){
-        snprintf(messageTx, MAX_LEN, "unsupported command\n");
+    else if (strncmp(messageRx, "dips", strlen("dips")) == 0){
+        snprintf(messageTx, MAX_LEN, "unsupported command - dips\n");
     }
-    else if (strcmp(messageRx, "history\n") == 0){
-        snprintf(messageTx, MAX_LEN, "unsupported command\n");
+    else if (strncmp(messageRx, "history", strlen("history")) == 0){
+        snprintf(messageTx, MAX_LEN, "unsupported command - history\n");
     }
-    else if (strcmp(messageRx, "stop\n") == 0){
+    else if (strncmp(messageRx, "stop", strlen("stop")) == 0){
         snprintf(messageTx, MAX_LEN, "Program terminating.\n");
     }
     else{
