@@ -12,7 +12,7 @@
 
 #define HELP_MSG "\nAccepted command examples:\ncount      -- get the total number of samples taken.\nlength     -- get the number of samples taken in the previously completed second.\ndips       -- get the number of dips in the previously completed second.\nhistory    -- get all the samples in the previously completed second.\nstop       -- cause the server program to end.\n<enter>    -- repeat last command.\n"
 #define MAX_LEN 1500
-#define MAX_WRITABLE_HISTORY 1498
+#define MAX_WRITABLE_HISTORY 1470 //max number of bytes that can be sent for history without causing a line break
 #define PORT 12345
 
 static pthread_cond_t* mainCondVar;
@@ -113,7 +113,6 @@ static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote
                 bytesWritten = snprintf(messageTx + offset, MAX_LEN - offset, "%.3f, ", history[i]);
             }
             offset += bytesWritten;
-            printf("offset = %d\n", offset);
             if (offset == MAX_WRITABLE_HISTORY){
                 sendto(socketDescriptor, messageTx, strlen(messageTx), 0, (struct sockaddr*) &sinRemote, sin_len);
                 memset(messageTx, 0, sizeof(messageTx));
