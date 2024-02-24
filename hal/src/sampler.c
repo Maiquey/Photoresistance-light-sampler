@@ -14,19 +14,20 @@
 #define EXPONENTIAL_SMOOTHING_PREV_WEIGHT 0.999
 
 static bool isRunning = true;
-static int historyBuffer[NUM_SAMPLES] = {0};
-static int currentBuffer[NUM_SAMPLES] = {0};
+static double historyBuffer[NUM_SAMPLES] = {0};
+static double currentBuffer[NUM_SAMPLES] = {0};
 static bool is_initialized = false;
 static long long numSamplesTaken = 0;
 static int historySize = 0;
 static int currentSize = 0;
-static int avgLightReading = 0;
+static double avgLightReading = 0;
 
 static void sleepForMs(long long delayInMs);
 static long long getTimeInMs(void);
 static void* sampleLightLevels();
 static int getVoltage1Reading();
 static void* swapHistoryPeriodic();
+static double a2dToVoltage(int a2dReading);
 
 static pthread_t threads[2];
 pthread_mutex_t mutexHistory;
@@ -38,7 +39,7 @@ void Sampler_init(void)
     is_initialized = true;
 
     pthread_mutex_init(&mutexHistory, NULL);
-    avgLightReading = getVoltage1Reading();
+    avgLightReading = a2dToVoltage(getVoltage1Reading());
 
     //start the thread - will sample light level every 1ms
     pthread_create(&threads[0], NULL, sampleLightLevels, NULL);
@@ -67,7 +68,7 @@ void Sampler_moveCurrentDataToHistory(void)
 {
     assert(is_initialized);
     pthread_mutex_lock(&mutexHistory);
-    memcpy(historyBuffer, currentBuffer, sizeof(int) * NUM_SAMPLES);
+    memcpy(historyBuffer, currentBuffer, sizeof(double) * NUM_SAMPLES);
     historySize = currentSize;
     currentSize = 0;
     pthread_mutex_unlock(&mutexHistory);
@@ -90,7 +91,7 @@ double* Sampler_getHistory(int* size) //TODO - check previously int *size parame
 {
     assert(is_initialized);
     double* historyCopy = (double*)malloc((*size) * sizeof(double));
-    memcpy(historyCopy, historyBuffer, sizeof(int) * (*size));
+    memcpy(historyCopy, historyBuffer, sizeof(double) * (*size));
     return historyCopy;
 }
 
@@ -124,12 +125,11 @@ static void* sampleLightLevels()
 {
     while (isRunning) {
         pthread_mutex_lock(&mutexHistory);
-        int a2dReading = getVoltage1Reading();
-        currentBuffer[currentSize] = a2dReading;
+        double voltageReading = a2dToVoltage(getVoltage1Reading());
+        currentBuffer[currentSize] = voltageReading;
         numSamplesTaken++;
         currentSize++;
-        avgLightReading = (EXPONENTIAL_SMOOTHING_PREV_WEIGHT * avgLightReading) + ((1 - EXPONENTIAL_SMOOTHING_PREV_WEIGHT) * a2dReading);
-        // printf("%d\n", a2dReading);
+        avgLightReading = (EXPONENTIAL_SMOOTHING_PREV_WEIGHT * avgLightReading) + ((1 - EXPONENTIAL_SMOOTHING_PREV_WEIGHT) * voltageReading);
         pthread_mutex_unlock(&mutexHistory);
         sleepForMs(1);
     }
@@ -141,7 +141,7 @@ static void* swapHistoryPeriodic()
     long long startTime = getTimeInMs();
     while (isRunning) {
         long long currentTime = getTimeInMs();
-        if (currentTime - startTime >= 1000){ //TODO - move this call to main with a mutex on history
+        if (currentTime - startTime >= 1000){
             Sampler_moveCurrentDataToHistory();
             startTime = currentTime;
         }
@@ -180,6 +180,11 @@ static long long getTimeInMs(void){
     long long milliSeconds = seconds * 1000
     + nanoSeconds / 1000000;
     return milliSeconds;
+}
+
+static double a2dToVoltage(int a2dReading)
+{
+    return ((double)a2dReading / (double)A2D_MAX_READING) * (double)A2D_VOLTAGE_REF_V;
 }
 
 pthread_mutex_t* Sampler_getHistoryMutexRef(void)
