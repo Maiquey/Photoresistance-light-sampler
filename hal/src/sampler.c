@@ -1,6 +1,7 @@
 #include "hal/sampler.h"
 #include "hal/timing.h"
 #include "hal/potLed.h"
+#include "hal/sigDisplay.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -158,6 +159,7 @@ static void* swapHistoryPeriodic()
         if (currentTime - startTime >= 1000){
             Sampler_moveCurrentDataToHistory();
             startTime = currentTime;
+            SigDisplay_setNumber(historyDips);
             outputDataToTerminal();
         }
     }

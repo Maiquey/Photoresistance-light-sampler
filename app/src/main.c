@@ -7,6 +7,7 @@
 #include "periodTimer.h"
 #include "hal/sampler.h"
 #include "hal/potLed.h"
+#include "hal/sigDisplay.h"
 #include "network.h"
 
 pthread_mutex_t mutexMain;
@@ -28,6 +29,7 @@ int main()
     Sampler_init();
     Network_init(&condVarFinished);
     PotLed_init();
+    SigDisplay_init();
 
     pthread_mutex_lock(&mutexMain);
     pthread_cond_wait(&condVarFinished, &mutexMain);
@@ -36,6 +38,7 @@ int main()
     Sampler_cleanup();
     Network_cleanup();
     PotLed_cleanup();
+    SigDisplay_cleanup();
 
     // Cleanup all modules (HAL modules last)
 

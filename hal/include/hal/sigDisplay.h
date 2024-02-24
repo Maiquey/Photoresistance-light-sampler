@@ -11,4 +11,6 @@
 void SigDisplay_init(void);
 void SigDisplay_cleanup(void);
 
+void SigDisplay_setNumber(int newValue);
+
 #endif
