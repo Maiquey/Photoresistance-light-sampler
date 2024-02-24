@@ -120,6 +120,7 @@ static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote
                 bytesWritten = 0;
             }
         }
+        free(history);
     }
     else if (strncmp(messageRx, "stop", strlen("stop")) == 0){
         snprintf(messageTx, MAX_LEN, "Program terminating.\n");

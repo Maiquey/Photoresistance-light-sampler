@@ -33,6 +33,7 @@ static void* sampleLightLevels();
 static int getVoltage1Reading();
 static void* swapHistoryPeriodic();
 static double a2dToVoltage(int a2dReading);
+static void outputDataToTerminal();
 
 static pthread_t threads[2];
 pthread_mutex_t mutexHistory;
@@ -168,6 +169,7 @@ static void* swapHistoryPeriodic()
         if (currentTime - startTime >= 1000){
             Sampler_moveCurrentDataToHistory();
             startTime = currentTime;
+            outputDataToTerminal();
         }
     }
     pthread_exit(NULL);
@@ -214,4 +216,25 @@ static double a2dToVoltage(int a2dReading)
 pthread_mutex_t* Sampler_getHistoryMutexRef(void)
 {
     return &mutexHistory;
+}
+
+static void outputDataToTerminal()
+{
+    //TODO - make it so that %d values always have the same spacing regardless of how many digits
+    printf("#Smpl/s = %3d    POT @ %4d => %2dHz   avg = %.3fV    dips =  %2d    Smpl ms[ %.3f,  %.3f] avg %.3f/%3d    \n",
+            historySize, 0, 0, avgLightReading, historyDips, 0.0, 0.0, 0.0, historySize);
+    int numSamples = 10;
+    int scalingFactor = (historySize-1) / numSamples;
+    if (historySize < numSamples) {
+        numSamples = historySize;
+        scalingFactor = 1;
+    }
+    for (int i = 0; i < numSamples; i++){
+        if (i == 0){
+            printf("  %d:%.3f", i*scalingFactor, historyBuffer[i]);
+        } else {
+            printf("  %3d:%.3f", i*scalingFactor, historyBuffer[i]);
+        }
+    }
+    printf("\n");
 }
