@@ -5,6 +5,9 @@
         "assert.h": "c",
         "sampler.h": "c",
         "inet.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "string.h": "c",
+        "stdlib.h": "c",
+        "stdbool.h": "c"
     }
 }

@@ -13,6 +13,7 @@
 #define A2D_MAX_READING 4095
 #define EXPONENTIAL_SMOOTHING_PREV_WEIGHT 0.999
 
+static bool isRunning = true;
 static int historyBuffer[NUM_SAMPLES] = {0};
 static int currentBuffer[NUM_SAMPLES] = {0};
 static bool is_initialized = false;
@@ -46,11 +47,14 @@ void Sampler_init(void)
 
 void Sampler_cleanup(void)
 {
+    printf("sampler cleanup start\n");
     //free memory, close files
     assert(is_initialized);
     is_initialized = false;
+    isRunning = false;
     //join thread
     pthread_join(threads[0], NULL);
+    printf("sampler cleanup done\n");
 }
 
 // Must be called once every 1s.
@@ -79,12 +83,13 @@ int Sampler_getHistorySize(void)
 // number of elements in the returned array (output-only parameter).
 // The calling code must call free() on the returned pointer.
 // Note: It provides both data and size to ensure consistency.
-double* Sampler_getHistory(int *size)
+double* Sampler_getHistory(void) //TODO - check previously int *size parameter - change to static?
 {
     assert(is_initialized);
     pthread_mutex_lock(&mutexHistory);
-    double* historyCopy = (double*)malloc((*size) * sizeof(double));
-    memcpy(historyCopy, historyBuffer, sizeof(int) * (*size));
+    int internalSize = Sampler_getHistorySize();
+    double* historyCopy = (double*)malloc((internalSize) * sizeof(double));
+    memcpy(historyCopy, historyBuffer, sizeof(int) * (internalSize));
     pthread_mutex_lock(&mutexHistory);
     return historyCopy;
 }
@@ -118,7 +123,7 @@ static void sleepForMs(long long delayInMs)
 static void* sampleLightLevels()
 {
     long long startTime = getTimeInMs();
-    while (1) {
+    while (isRunning) {
         long long currentTime = getTimeInMs();
         if (currentTime - startTime >= 1000){ //TODO - move this call to main with a mutex on history
             Sampler_moveCurrentDataToHistory();

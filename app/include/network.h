@@ -6,9 +6,10 @@
 #define _NETWORK_H_
 
 #include <stdbool.h>
+#include <pthread.h>
 
 // Begin/end the background thread which samples light levels.
-void Network_init(void);
+void Network_init(pthread_cond_t* stopCondVar);
 void Network_cleanup(void);
 
 // // Must be called once every 1s.

@@ -33,7 +33,7 @@ int Sampler_getHistorySize(void);
 // number of elements in the returned array (output-only parameter).
 // The calling code must call free() on the returned pointer.
 // Note: It provides both data and size to ensure consistency.
-double* Sampler_getHistory(int *size);
+double* Sampler_getHistory(void);
 
 // Get the average light level (not tied to the history).
 double Sampler_getAverageReading(void);

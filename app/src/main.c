@@ -25,10 +25,13 @@ int main()
     //     printf("  -> Reading button time %d = %d\n", i, i);
     // }
     Sampler_init();
-    Network_init();
+    Network_init(&condVarFinished);
     pthread_mutex_lock(&mutexMain);
     pthread_cond_wait(&condVarFinished, &mutexMain);
     pthread_mutex_unlock(&mutexMain);
+
+    Sampler_cleanup();
+    Network_cleanup();
 
     // Cleanup all modules (HAL modules last)
 
