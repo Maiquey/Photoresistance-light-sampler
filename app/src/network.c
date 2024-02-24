@@ -12,18 +12,22 @@
 #define MAX_LEN 1500
 #define PORT 12345
 
+static bool is_initialized = false;
 static struct sockaddr_in sin;
 static int socketDescriptor;
 
 static pthread_t threads[1];
 // static pthread_mutex_t mutexHistory;
 
-static void* receiveData(void* _arg);
-// static void processRx();
+static void* receiveData();
+static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote, unsigned int sin_len);
 
 // Begin/end the background thread which processes incoming data.
 void Network_init(void)
 {
+    assert(!is_initialized);
+    is_initialized = true;
+
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -36,12 +40,15 @@ void Network_init(void)
 
 void Network_cleanup(void)
 {
+    assert(is_initialized);
+    is_initialized = false;
     close(socketDescriptor);
     pthread_join(threads[0], NULL);
 }
 
-static void* receiveData(void* _arg)
+static void* receiveData()
 {
+    assert(is_initialized);
     struct sockaddr_in sinRemote;
     char messageRx[MAX_LEN];
 
@@ -49,17 +56,16 @@ static void* receiveData(void* _arg)
         unsigned int sin_len = sizeof(sinRemote);
         int bytesRx = recvfrom(socketDescriptor, messageRx, MAX_LEN - 1, 0, (struct sockaddr*) &sinRemote, &sin_len);
         messageRx[bytesRx] = 0; //null-terminate
-        // processRx(messageRx, bytesRx);
-        char messageTx[MAX_LEN];
-        snprintf(messageTx, MAX_LEN, "%d bytes received\n", bytesRx);
-        sendto(socketDescriptor, messageTx, strlen(messageTx), 0, (struct sockaddr*) &sinRemote, sin_len);
+        processRx(messageRx, bytesRx, sinRemote, sin_len);
+
     }
 }
 
-// static void processRx(char* messageRx, int bytesRx)
-// {
-//     char messageTx[MAX_LEN];
-//     snprintf(messageTx, MAX_LEN, "%d bytes received\n", bytesRx);
+static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote, unsigned int sin_len)
+{
+    char messageTx[MAX_LEN];
+    snprintf(messageTx, MAX_LEN, "%d bytes received: %s\n", bytesRx, messageRx);
+    sendto(socketDescriptor, messageTx, strlen(messageTx), 0, (struct sockaddr*) &sinRemote, sin_len);
 
 
-// }
+}

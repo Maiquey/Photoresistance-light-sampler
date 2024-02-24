@@ -23,7 +23,7 @@ static int avgLightReading = 0;
 
 static void sleepForMs(long long delayInMs);
 static long long getTimeInMs(void);
-static void* sampleLightLevels(void* _arg);
+static void* sampleLightLevels();
 static int getVoltage1Reading();
 
 static pthread_t threads[1];
@@ -115,7 +115,7 @@ static void sleepForMs(long long delayInMs)
     nanosleep(&reqDelay, (struct timespec *) NULL);
 }
 
-static void* sampleLightLevels(void* _arg)
+static void* sampleLightLevels()
 {
     long long startTime = getTimeInMs();
     while (1) {
