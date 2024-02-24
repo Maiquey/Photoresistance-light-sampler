@@ -12,10 +12,11 @@
 
 #define HELP_MSG "\nAccepted command examples:\ncount      -- get the total number of samples taken.\nlength     -- get the number of samples taken in the previously completed second.\ndips       -- get the number of dips in the previously completed second.\nhistory    -- get all the samples in the previously completed second.\nstop       -- cause the server program to end.\n<enter>    -- repeat last command.\n"
 #define MAX_LEN 1500
-#define MAX_LEN_HISTORY 1470
+#define MAX_WRITABLE_HISTORY 1498
 #define PORT 12345
 
 static pthread_cond_t* mainCondVar;
+static pthread_mutex_t* sampleHistoryMutex;
 
 static bool isRunning = true;
 static bool is_initialized = false;
@@ -37,6 +38,7 @@ void Network_init(pthread_cond_t* stopCondVar)
     is_initialized = true;
 
     mainCondVar = stopCondVar;
+    sampleHistoryMutex = Sampler_getHistoryMutexRef();
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
@@ -88,16 +90,37 @@ static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote
         snprintf(messageTx, MAX_LEN, HELP_MSG);
     }
     else if (strncmp(messageRx, "count", strlen("count")) == 0){
-        snprintf(messageTx, MAX_LEN, "%lld\n", Sampler_getNumSamplesTaken());
+        snprintf(messageTx, MAX_LEN, "# samples taken total: %lld\n", Sampler_getNumSamplesTaken());
     }
     else if (strncmp(messageRx, "length", strlen("length")) == 0){
-        snprintf(messageTx, MAX_LEN, "%d\n", Sampler_getHistorySize());
+        snprintf(messageTx, MAX_LEN, "# samples taken last second: %d\n", Sampler_getHistorySize());
     }
     else if (strncmp(messageRx, "dips", strlen("dips")) == 0){
-        snprintf(messageTx, MAX_LEN, "%d\n", 0);
+        snprintf(messageTx, MAX_LEN, "# Dips: %d\n", 0);
     }
     else if (strncmp(messageRx, "history", strlen("history")) == 0){
-        snprintf(messageTx, MAX_LEN, "unsupported command - history\n");
+        // snprintf(messageTx, MAX_LEN, "unsupported command - history\n");
+        pthread_mutex_lock(sampleHistoryMutex);
+        int historySize = Sampler_getHistorySize();
+        double* history = Sampler_getHistory(&historySize);
+        pthread_mutex_unlock(sampleHistoryMutex);
+        int offset = 0;
+        int bytesWritten = 0;
+        for (int i = 0; i < historySize; i++){
+            if ((i+1) % 10 == 0 || i == historySize - 1){
+                bytesWritten = snprintf(messageTx + offset, MAX_LEN - offset, "%.3f,\n", history[i]);
+            } else {
+                bytesWritten = snprintf(messageTx + offset, MAX_LEN - offset, "%.3f, ", history[i]);
+            }
+            offset += bytesWritten;
+            printf("offset = %d\n", offset);
+            if (offset == MAX_WRITABLE_HISTORY){
+                sendto(socketDescriptor, messageTx, strlen(messageTx), 0, (struct sockaddr*) &sinRemote, sin_len);
+                memset(messageTx, 0, sizeof(messageTx));
+                offset = 0;
+                bytesWritten = 0;
+            }
+        }
     }
     else if (strncmp(messageRx, "stop", strlen("stop")) == 0){
         snprintf(messageTx, MAX_LEN, "Program terminating.\n");
