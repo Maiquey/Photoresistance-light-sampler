@@ -42,6 +42,9 @@ double Sampler_getAverageReading(void);
 // Get the total number of light level samples taken so far.
 long long Sampler_getNumSamplesTaken(void);
 
+// Get the number of dips measured during the previous complete second.
+int Sampler_getHistoryNumDips(void);
+
 pthread_mutex_t* Sampler_getHistoryMutexRef(void);
 
 #endif

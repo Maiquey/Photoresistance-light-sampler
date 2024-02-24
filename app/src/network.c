@@ -96,7 +96,7 @@ static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote
         snprintf(messageTx, MAX_LEN, "# samples taken last second: %d\n", Sampler_getHistorySize());
     }
     else if (strncmp(messageRx, "dips", strlen("dips")) == 0){
-        snprintf(messageTx, MAX_LEN, "# Dips: %d\n", 0);
+        snprintf(messageTx, MAX_LEN, "# Dips: %d\n", Sampler_getHistoryNumDips());
     }
     else if (strncmp(messageRx, "history", strlen("history")) == 0){
         // snprintf(messageTx, MAX_LEN, "unsupported command - history\n");

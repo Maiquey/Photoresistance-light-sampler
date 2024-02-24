@@ -12,6 +12,8 @@
 #define A2D_VOLTAGE_REF_V 1.8
 #define A2D_MAX_READING 4095
 #define EXPONENTIAL_SMOOTHING_PREV_WEIGHT 0.999
+#define DIP_THRESHOLD 0.1
+#define DIP_HYSTERESIS_THRESHOLD 0.07
 
 static bool isRunning = true;
 static double historyBuffer[NUM_SAMPLES] = {0};
@@ -20,7 +22,10 @@ static bool is_initialized = false;
 static long long numSamplesTaken = 0;
 static int historySize = 0;
 static int currentSize = 0;
+static int historyDips = 0;
 static double avgLightReading = 0;
+static int numDips = 0;
+static bool dipAllowed = true;
 
 static void sleepForMs(long long delayInMs);
 static long long getTimeInMs(void);
@@ -70,7 +75,10 @@ void Sampler_moveCurrentDataToHistory(void)
     pthread_mutex_lock(&mutexHistory);
     memcpy(historyBuffer, currentBuffer, sizeof(double) * NUM_SAMPLES);
     historySize = currentSize;
+    historyDips = numDips;
     currentSize = 0;
+    numDips = 0;
+    dipAllowed = true;
     pthread_mutex_unlock(&mutexHistory);
     // printf("history size: %d\n", historySize);
 }
@@ -109,6 +117,12 @@ long long Sampler_getNumSamplesTaken(void)
     return numSamplesTaken;
 }
 
+// Get the number of dips measured during the previous complete second.
+int Sampler_getHistoryNumDips(void)
+{
+    return historyDips;
+}
+
 //TODO - put in its own module
 static void sleepForMs(long long delayInMs)
 {
@@ -127,6 +141,16 @@ static void* sampleLightLevels()
         pthread_mutex_lock(&mutexHistory);
         double voltageReading = a2dToVoltage(getVoltage1Reading());
         currentBuffer[currentSize] = voltageReading;
+        if (dipAllowed){
+            if (voltageReading <= avgLightReading - DIP_THRESHOLD){
+                numDips++;
+                dipAllowed = false;
+            }
+        } else {
+            if (voltageReading >= avgLightReading - DIP_HYSTERESIS_THRESHOLD){
+                dipAllowed = true;
+            }
+        }
         numSamplesTaken++;
         currentSize++;
         avgLightReading = (EXPONENTIAL_SMOOTHING_PREV_WEIGHT * avgLightReading) + ((1 - EXPONENTIAL_SMOOTHING_PREV_WEIGHT) * voltageReading);
