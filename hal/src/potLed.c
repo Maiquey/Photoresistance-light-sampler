@@ -38,7 +38,7 @@ void PotLed_init(void)
 {
     assert(!is_initialized);
     is_initialized = true;
-    
+    //TODO - set config pin p9_21 to pwm
     pthread_create(&threads[0], NULL, updatePWM, NULL);
 }
 
