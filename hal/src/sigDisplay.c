@@ -67,8 +67,8 @@ void SigDisplay_cleanup(void)
     isRunning = false;
     writeToFile(LEFT_VALUE, "0");
     writeToFile(RIGHT_VALUE, "0");
-    close(i2cFileDesc);
     pthread_join(threads[0], NULL);
+    close(i2cFileDesc);
 }
 
 // TODO

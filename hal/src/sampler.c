@@ -2,6 +2,7 @@
 #include "hal/timing.h"
 #include "hal/potLed.h"
 #include "hal/sigDisplay.h"
+#include "hal/periodTimer.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +30,7 @@ static int historyDips = 0;
 static double avgLightReading = 0;
 static int numDips = 0;
 static bool dipAllowed = true;
+Period_statistics_t *pStats;
 
 static void* sampleLightLevels();
 static int getVoltage1Reading();
@@ -46,6 +48,7 @@ void Sampler_init(void)
     is_initialized = true;
 
     pthread_mutex_init(&mutexHistory, NULL);
+    pStats = (Period_statistics_t*)malloc(sizeof(Period_statistics_t));
     avgLightReading = a2dToVoltage(getVoltage1Reading());
 
     //start the thread - will sample light level every 1ms
@@ -131,6 +134,7 @@ static void* sampleLightLevels()
     while (isRunning) {
         pthread_mutex_lock(&mutexHistory);
         double voltageReading = a2dToVoltage(getVoltage1Reading());
+        Period_markEvent(PERIOD_EVENT_SAMPLE_LIGHT);
         currentBuffer[currentSize] = voltageReading;
         if (dipAllowed){
             if (voltageReading <= avgLightReading - DIP_THRESHOLD){
@@ -160,6 +164,7 @@ static void* swapHistoryPeriodic()
             Sampler_moveCurrentDataToHistory();
             startTime = currentTime;
             SigDisplay_setNumber(historyDips);
+            Period_getStatisticsAndClear(PERIOD_EVENT_SAMPLE_LIGHT, pStats);
             outputDataToTerminal();
         }
     }
@@ -202,7 +207,7 @@ pthread_mutex_t* Sampler_getHistoryMutexRef(void)
 static void outputDataToTerminal()
 {
     printf("#Smpl/s = %3d    POT @ %4d => %2dHz   avg = %.3fV    dips =  %2d    Smpl ms[ %.3f,  %.3f] avg %.3f/%3d    \n",
-            historySize, PotLed_getPOTReading(), PotLed_getFrequency(), avgLightReading, historyDips, 0.0, 0.0, 0.0, historySize);
+            historySize, PotLed_getPOTReading(), PotLed_getFrequency(), avgLightReading, historyDips, pStats->minPeriodInMs, pStats->maxPeriodInMs, pStats->avgPeriodInMs, pStats->numSamples);
     int numSamples = 10;
     int scalingFactor = (historySize-1) / numSamples;
     if (historySize < numSamples) {

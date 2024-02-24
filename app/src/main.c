@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include "periodTimer.h"
+#include "hal/periodTimer.h"
 #include "hal/sampler.h"
 #include "hal/potLed.h"
 #include "hal/sigDisplay.h"
@@ -26,10 +26,12 @@ int main()
     // for (int i = 0; i < 10; i++) {
     //     printf("  -> Reading button time %d = %d\n", i, i);
     // }
+    Period_init();
     Sampler_init();
     Network_init(&condVarFinished);
     PotLed_init();
     SigDisplay_init();
+    
 
     pthread_mutex_lock(&mutexMain);
     pthread_cond_wait(&condVarFinished, &mutexMain);
@@ -39,6 +41,7 @@ int main()
     Network_cleanup();
     PotLed_cleanup();
     SigDisplay_cleanup();
+    Period_cleanup();
 
     // Cleanup all modules (HAL modules last)
 
