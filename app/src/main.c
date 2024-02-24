@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include "periodTimer.h"
 #include "hal/sampler.h"
+#include "network.h"
 
 pthread_mutex_t mutexMain;
 pthread_cond_t condVarFinished;
@@ -24,6 +25,7 @@ int main()
     //     printf("  -> Reading button time %d = %d\n", i, i);
     // }
     Sampler_init();
+    Network_init();
     pthread_mutex_lock(&mutexMain);
     pthread_cond_wait(&condVarFinished, &mutexMain);
     pthread_mutex_unlock(&mutexMain);

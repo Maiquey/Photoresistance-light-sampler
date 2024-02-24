@@ -120,7 +120,7 @@ static void* sampleLightLevels(void* _arg)
     long long startTime = getTimeInMs();
     while (1) {
         long long currentTime = getTimeInMs();
-        if (currentTime - startTime >= 1000){
+        if (currentTime - startTime >= 1000){ //TODO - move this call to main with a mutex on history
             Sampler_moveCurrentDataToHistory();
             startTime = currentTime;
         }

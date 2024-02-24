@@ -3,6 +3,7 @@
     "files.associations": {
         "button.h": "c",
         "assert.h": "c",
-        "sampler.h": "c"
+        "sampler.h": "c",
+        "inet.h": "c"
     }
 }
