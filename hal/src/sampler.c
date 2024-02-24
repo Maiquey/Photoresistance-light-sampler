@@ -11,6 +11,7 @@
 #define A2D_FILE_VOLTAGE1 "/sys/bus/iio/devices/iio:device0/in_voltage1_raw"
 #define A2D_VOLTAGE_REF_V 1.8
 #define A2D_MAX_READING 4095
+#define EXPONENTIAL_SMOOTHING_PREV_WEIGHT 0.999
 
 static int historyBuffer[NUM_SAMPLES] = {0};
 static int currentBuffer[NUM_SAMPLES] = {0};
@@ -18,6 +19,7 @@ static bool is_initialized = false;
 static long long numSamplesTaken = 0;
 static int historySize = 0;
 static int currentSize = 0;
+static int avgLightReading = 0;
 
 static void sleepForMs(long long delayInMs);
 static long long getTimeInMs(void);
@@ -34,6 +36,7 @@ void Sampler_init(void)
     is_initialized = true;
 
     pthread_mutex_init(&mutexHistory, NULL);
+    avgLightReading = getVoltage1Reading();
 
     //start the thread - will sample light level every 1ms
     pthread_create(&threads[0], NULL, sampleLightLevels, NULL);
@@ -125,6 +128,7 @@ static void* sampleLightLevels(void* _arg)
         currentBuffer[currentSize] = a2dReading;
         numSamplesTaken++;
         currentSize++;
+        avgLightReading = (EXPONENTIAL_SMOOTHING_PREV_WEIGHT * avgLightReading) + ((1 - EXPONENTIAL_SMOOTHING_PREV_WEIGHT) * a2dReading);
         // printf("%d\n", a2dReading);
         sleepForMs(1);
     }
