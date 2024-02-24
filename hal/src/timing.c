@@ -2,7 +2,7 @@
 // Function implementations gathered from Assignment Description Doc
 
 #define _POSIX_C_SOURCE 200809L
-#include "timing.h"
+#include "hal/timing.h"
 #include <time.h>
 #include <stdio.h>
 

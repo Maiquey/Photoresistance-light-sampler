@@ -1,4 +1,6 @@
 #include "hal/sampler.h"
+#include "hal/timing.h"
+#include "hal/potLed.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,8 +29,6 @@ static double avgLightReading = 0;
 static int numDips = 0;
 static bool dipAllowed = true;
 
-static void sleepForMs(long long delayInMs);
-static long long getTimeInMs(void);
 static void* sampleLightLevels();
 static int getVoltage1Reading();
 static void* swapHistoryPeriodic();
@@ -124,17 +124,6 @@ int Sampler_getHistoryNumDips(void)
     return historyDips;
 }
 
-//TODO - put in its own module
-static void sleepForMs(long long delayInMs)
-{
-    const long long NS_PER_MS = 1000 * 1000;
-    const long long NS_PER_SECOND = 1000000000;
-    long long delayNs = delayInMs * NS_PER_MS;
-    int seconds = delayNs / NS_PER_SECOND;
-    int nanoseconds = delayNs % NS_PER_SECOND;
-    struct timespec reqDelay = {seconds, nanoseconds};
-    nanosleep(&reqDelay, (struct timespec *) NULL);
-}
 
 static void* sampleLightLevels()
 {
@@ -197,16 +186,6 @@ static int getVoltage1Reading()
     return a2dReading;
 }
 
-//TODO - put in its own module
-static long long getTimeInMs(void){
-    struct timespec spec;
-    clock_gettime(CLOCK_REALTIME, &spec);
-    long long seconds = spec.tv_sec;
-    long long nanoSeconds = spec.tv_nsec;
-    long long milliSeconds = seconds * 1000
-    + nanoSeconds / 1000000;
-    return milliSeconds;
-}
 
 static double a2dToVoltage(int a2dReading)
 {
@@ -220,9 +199,8 @@ pthread_mutex_t* Sampler_getHistoryMutexRef(void)
 
 static void outputDataToTerminal()
 {
-    //TODO - make it so that %d values always have the same spacing regardless of how many digits
     printf("#Smpl/s = %3d    POT @ %4d => %2dHz   avg = %.3fV    dips =  %2d    Smpl ms[ %.3f,  %.3f] avg %.3f/%3d    \n",
-            historySize, 0, 0, avgLightReading, historyDips, 0.0, 0.0, 0.0, historySize);
+            historySize, PotLed_getPOTReading(), PotLed_getFrequency(), avgLightReading, historyDips, 0.0, 0.0, 0.0, historySize);
     int numSamples = 10;
     int scalingFactor = (historySize-1) / numSamples;
     if (historySize < numSamples) {
