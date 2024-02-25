@@ -72,9 +72,9 @@ void SigDisplay_cleanup(void)
     assert(is_initialized);
     is_initialized = false;
     isRunning = false;
+    pthread_join(thread, NULL);
     writeToFile(LEFT_VALUE, "0");
     writeToFile(RIGHT_VALUE, "0");
-    pthread_join(thread, NULL);
     close(i2cFileDesc);
 }
 
