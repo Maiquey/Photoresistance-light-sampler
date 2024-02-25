@@ -28,13 +28,11 @@ static bool ledOn = false;
 
 static int getVoltage0Reading();
 static void* updatePWM();
-// static void writeToFile(const char* filePath, const char* input);
-static void updatePeriod();
-static void updateDutyCycle();
-static void enableLed(bool enable);
+static void writeValueToFile(const char* filePath, int value);
 static void runCommand(char* command);
 
-//intialize/destroy thread(s) for this module
+// intialize/destroy thread(s) for this module
+// Also sets config pins
 void PotLed_init(void)
 {
     assert(!is_initialized);
@@ -43,57 +41,53 @@ void PotLed_init(void)
     pthread_create(&thread, NULL, updatePWM, NULL);
 }
 
+// General cleanup
 void PotLed_cleanup(void)
 {
     assert(is_initialized);
     is_initialized = false;
     isRunning = false;
-    enableLed(false);
+    writeValueToFile(LED_ENABLE_FILE, 0);
     pthread_join(thread, NULL);
 }
 
-// Must be called once every 1s.
-// Moves the samples that it has been collecting this second into
-// the history, which makes the samples available for reads (below).
+// returns potentiometer reading
 int PotLed_getPOTReading(void)
 {
     assert(is_initialized);
     return potReading;
 }
 
-// Get the number of samples collected during the previous complete second.
+// returns LED frequency
 int PotLed_getFrequency(void)
 {
     assert(is_initialized);
     return currentFreq;
 }
 
+// Main thread function
+// Continuosly samples the a2d reading of potentiometer and adjusts frequency of led accordingly
 static void* updatePWM()
 {
     long long startTime = getTimeInMs() + 100; //start to initially set the frequency
-    // writeToFile(LED_ENABLE_FILE, "1");
     while (isRunning) {
         long long currentTime = getTimeInMs();
         if (currentTime - startTime >= 100){
                 int a2dReading = getVoltage0Reading();
-                // printf("%d\n", a2dReading);
                 if (a2dReading != potReading){
                 potReading = a2dReading;
                 currentFreq = potReading / FREQUENCY_DIV_FACTOR;
-                // char period[INPUT_MAX_LEN];
-                // char dutyCycle[INPUT_MAX_LEN];
-                // snprintf(period, INPUT_MAX_LEN, "%d", NANOSECONDS_IN_A_SECOND / currentFreq);
-                // snprintf(dutyCycle, INPUT_MAX_LEN, "%d", (NANOSECONDS_IN_A_SECOND / currentFreq) / 2);
-                // writeToFile(LED_PERIOD_FILE, period);
-                // writeToFile(LED_DUTY_CYCLE_FILE, dutyCycle);
-                // updateLed();
+                int period = NANOSECONDS_IN_A_SECOND / currentFreq;
+                int dutyCycle = period / 2;
                 if (currentFreq == 0){
-                    enableLed(false);
+                    writeValueToFile(LED_ENABLE_FILE, 0);
+                    ledOn = false;
                 } else {
-                    updatePeriod();
-                    updateDutyCycle();
+                    writeValueToFile(LED_PERIOD_FILE, period);
+                    writeValueToFile(LED_DUTY_CYCLE_FILE, dutyCycle);
                     if (!ledOn){
-                        enableLed(true);
+                        writeValueToFile(LED_ENABLE_FILE, 1);
+                        ledOn = true;
                     }
                 }
             }
@@ -103,7 +97,7 @@ static void* updatePWM()
     pthread_exit(NULL);
 }
 
-// From A2D guide - to be modified for error handling
+// From A2D guide
 static int getVoltage0Reading()
 {
     // Open file
@@ -125,94 +119,16 @@ static int getVoltage0Reading()
     return a2dReading;
 }
 
-// static void writeToFile(const char* filePath, const char* input)
-// {
-//     // int period = NANOSECONDS_IN_A_SECOND / currentFreq;
-//     // int dutyCycle = period / 2;
-//     // int enable = 1;
-//     // set period
-//     FILE *f = fopen(filePath, "w");
-//     if (!f) {
-//         printf("ERROR: Unable to open pwm input file. Cape loaded?\n");
-//         printf(" Check /boot/uEnv.txt for correct options.\n");
-//         exit(-1);
-//     }
-//     int charWritten = fprintf(f, "%s", input);
-//     if (charWritten <= 0) {
-//         printf("ERROR WRITING DATA");
-//         exit(1);
-//     }
-//     fclose(f);
-//     // set duty cycle
-//     // f = fopen(LED_DUTY_CYCLE_FILE, "w");
-//     // if (!f) {
-//     //     printf("ERROR: Unable to open voltage input file. Cape loaded?\n");
-//     //     printf(" Check /boot/uEnv.txt for correct options.\n");
-//     //     exit(-1);
-//     // }
-//     // charWritten = fprintf(f, "%d", period);
-//     // if (charWritten <= 0) {
-//     //     printf("ERROR WRITING DATA");
-//     //     exit(1);
-//     // }
-//     // close(f)
-// }
-
-static void updatePeriod()
+// Write integer value to pwm files for blinking LED
+static void writeValueToFile(const char* filePath, int value)
 {
-    int period = NANOSECONDS_IN_A_SECOND / currentFreq;
-    // set period
-    FILE *f = fopen(LED_PERIOD_FILE, "w");
-    if (!f) {
-        printf("ERROR: Unable to open period file. Cape loaded?\n");
-        printf(" Check /boot/uEnv.txt for correct options.\n");
-        exit(-1);
-    }
-    int charWritten = fprintf(f, "%d", period);
-    if (charWritten <= 0) {
-        printf("ERROR WRITING DATA");
-        exit(1);
-    }
-    fclose(f);
-
-}
-
-static void updateDutyCycle()
-{
-    int period = NANOSECONDS_IN_A_SECOND / currentFreq;
-    int dutyCycle = period / 2;
-    // set duty cycle
-    FILE *f = fopen(LED_DUTY_CYCLE_FILE, "w");
+    FILE *f = fopen(filePath, "w");
     if (!f) {
         printf("ERROR: Unable to open duty cycle file. Cape loaded?\n");
         printf(" Check /boot/uEnv.txt for correct options.\n");
         exit(-1);
     }
-    int charWritten = fprintf(f, "%d", dutyCycle);
-    if (charWritten <= 0) {
-        printf("ERROR WRITING DATA");
-        exit(1);
-    }
-    fclose(f);
-}
-
-static void enableLed(bool enable)
-{
-    // set enable file
-    FILE *f = fopen(LED_ENABLE_FILE, "w");
-    if (!f) {
-        printf("ERROR: Unable to open enable file. Cape loaded?\n");
-        printf(" Check /boot/uEnv.txt for correct options.\n");
-        exit(-1);
-    }
-    int charWritten;
-    if (enable){
-        charWritten = fprintf(f, "1");
-        ledOn = true;
-    } else {
-        charWritten = fprintf(f, "0");
-        ledOn = false;
-    }
+    int charWritten = fprintf(f, "%d", value);
     if (charWritten <= 0) {
         printf("ERROR WRITING DATA");
         exit(1);

@@ -60,7 +60,6 @@ void Sampler_init(void)
 
 void Sampler_cleanup(void)
 {
-    printf("sampler cleanup start\n");
     //free memory, close files
     assert(is_initialized);
     is_initialized = false;
@@ -68,7 +67,8 @@ void Sampler_cleanup(void)
     //join thread
     pthread_join(samplerThread, NULL);
     pthread_join(historyThread, NULL);
-    printf("sampler cleanup done\n");
+    free(pStats);
+    pthread_mutex_destroy(&mutexHistory);
 }
 
 // Must be called once every 1s.

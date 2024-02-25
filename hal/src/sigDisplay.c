@@ -53,7 +53,7 @@ void SigDisplay_init(void)
 
     runCommand("config-pin p9_18 i2c");
     runCommand("config-pin p9_17 i2c");
-    
+
     i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
     writeI2cReg(i2cFileDesc, REG_DIRA, 0x00);
     writeI2cReg(i2cFileDesc, REG_DIRB, 0x00);
@@ -103,6 +103,9 @@ static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char va
     }
 }
 
+// Main thread loop function
+// Utilizes algorithm from I2C guide
+// Used to display number of light dips in last second
 static void* displayNumber()
 {
     while (isRunning) {
@@ -135,6 +138,8 @@ static void writeToFile(const char* filePath, const char* input)
     fclose(f);
 }
 
+// Helper function to configure bits for the 14-sig display
+// bool isLeft determines whether we model the 10s or 1s place digit of the real number
 static void configureLeftDigit(bool isLeft)
 {
     int digitDisplayed;
@@ -200,6 +205,7 @@ static void configureLeftDigit(bool isLeft)
 
 }
 
+// External function to set the number for display
 void SigDisplay_setNumber(int newValue)
 {
     currentNumber = newValue;
