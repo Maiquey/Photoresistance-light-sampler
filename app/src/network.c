@@ -55,13 +55,11 @@ void Network_init(pthread_cond_t* stopCondVar)
 // Cleanup
 void Network_cleanup(void)
 {
-    printf("network cleanup\n");
     assert(is_initialized);
     is_initialized = false;
     isRunning = false;
     close(socketDescriptor);
     pthread_join(thread, NULL);
-    printf("network cleanup done\n");
 }
 
 // main thread loop
@@ -137,7 +135,6 @@ static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote
 
     sendto(socketDescriptor, messageTx, strlen(messageTx), 0, (struct sockaddr*) &sinRemote, sin_len);
     if (strncmp(messageRx, "stop", strlen("stop")) == 0){
-        printf("signalling main\n");
         pthread_cond_signal(mainCondVar);
         isRunning = false;
     }

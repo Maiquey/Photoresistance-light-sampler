@@ -124,8 +124,7 @@ static void writeValueToFile(const char* filePath, int value)
 {
     FILE *f = fopen(filePath, "w");
     if (!f) {
-        printf("ERROR: Unable to open duty cycle file. Cape loaded?\n");
-        printf(" Check /boot/uEnv.txt for correct options.\n");
+        printf("ERROR: Unable to open file.\n");
         exit(-1);
     }
     int charWritten = fprintf(f, "%d", value);

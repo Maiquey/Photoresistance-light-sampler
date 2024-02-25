@@ -1,4 +1,5 @@
 // sigDisplay.h
+//
 // Module to drive the 14-sig display based on the number of dips observed
 //
 

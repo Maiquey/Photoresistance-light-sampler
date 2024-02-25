@@ -55,7 +55,6 @@ void Sampler_init(void)
     //start the thread - will sample light level every 1ms
     pthread_create(&samplerThread, NULL, sampleLightLevels, NULL);
     pthread_create(&historyThread, NULL, swapHistoryPeriodic, NULL);
-    printf("init complete\n");
 }
 
 void Sampler_cleanup(void)
