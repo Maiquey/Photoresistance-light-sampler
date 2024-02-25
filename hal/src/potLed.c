@@ -18,7 +18,7 @@
 #define LED_DUTY_CYCLE_FILE "/dev/bone/pwm/0/b/duty_cycle"
 #define LED_ENABLE_FILE "/dev/bone/pwm/0/b/enable"
 
-static pthread_t threads[1];
+static pthread_t thread;
 
 static bool is_initialized = false;
 static int potReading = 0;
@@ -32,14 +32,15 @@ static void* updatePWM();
 static void updatePeriod();
 static void updateDutyCycle();
 static void enableLed(bool enable);
+static void runCommand(char* command);
 
 //intialize/destroy thread(s) for this module
 void PotLed_init(void)
 {
     assert(!is_initialized);
     is_initialized = true;
-    //TODO - set config pin p9_21 to pwm
-    pthread_create(&threads[0], NULL, updatePWM, NULL);
+    runCommand("config-pin p9_21 pwm");
+    pthread_create(&thread, NULL, updatePWM, NULL);
 }
 
 void PotLed_cleanup(void)
@@ -48,7 +49,7 @@ void PotLed_cleanup(void)
     is_initialized = false;
     isRunning = false;
     enableLed(false);
-    pthread_join(threads[0], NULL);
+    pthread_join(thread, NULL);
 }
 
 // Must be called once every 1s.
@@ -217,4 +218,26 @@ static void enableLed(bool enable)
         exit(1);
     }
     fclose(f);
+}
+
+// From Assignment 1
+static void runCommand(char* command)
+{
+    // Execute the shell command (output into pipe)
+    FILE *pipe = popen(command, "r");
+    // Ignore output of the command; but consume it
+    // so we don't get an error when closing the pipe.
+    char buffer[1024];
+    while (!feof(pipe) && !ferror(pipe)) {
+        if (fgets(buffer, sizeof(buffer), pipe) == NULL)
+            break;
+        // printf("--> %s", buffer); // Uncomment for debugging
+    }
+    // Get the exit code from the pipe; non-zero is an error:
+    int exitCode = WEXITSTATUS(pclose(pipe));
+    if (exitCode != 0) {
+        perror("Unable to execute command:");
+        printf(" command: %s\n", command);
+        printf(" exit code: %d\n", exitCode);
+    }
 }

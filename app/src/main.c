@@ -15,53 +15,36 @@ pthread_cond_t condVarFinished;
 
 int main()
 {
-    printf("Hello world!\n");
-    
+    // Initialize main mutex and cond var
+
     pthread_mutex_init(&mutexMain, NULL);
     pthread_cond_init(&condVarFinished, NULL);
 
     // Initialize all modules; HAL modules first
 
-    // Main program logic:
-    // for (int i = 0; i < 10; i++) {
-    //     printf("  -> Reading button time %d = %d\n", i, i);
-    // }
     Period_init();
     Sampler_init();
-    Network_init(&condVarFinished);
     PotLed_init();
     SigDisplay_init();
+    Network_init(&condVarFinished);
     
+    // Wait on condition variable until signalled by networking thread
 
     pthread_mutex_lock(&mutexMain);
     pthread_cond_wait(&condVarFinished, &mutexMain);
     pthread_mutex_unlock(&mutexMain);
 
-    Sampler_cleanup();
+    // Cleanup all modules (HAL modules last)
+
     Network_cleanup();
+    Sampler_cleanup();
     PotLed_cleanup();
     SigDisplay_cleanup();
     Period_cleanup();
-
-    // Cleanup all modules (HAL modules last)
-
-    printf("!!! DONE !!!\n"); 
-
-    // Some bad code to try out and see what shows up.
-    #if 0
-        // Test your linting setup
-        //   - You should see a warning underline in VS Code
-        //   - You should see compile-time errors when building (-Wall -Werror)
-        // (Linting using clang-tidy; see )
-        int x = 0;
-        if (x = 10) {
-        }
-    #endif
-    #if 0
-        // Demonstrate -fsanitize=address (enabled in the root CMakeFiles.txt)
-        // Compile and run this code. Should see warning at compile time; error at runtime.
-        int data[3];
-        data[3] = 10;
-        printf("Value: %d\n", data[3]);
-    #endif
+    
+    // Free mutex and cond var 
+    
+    pthread_mutex_destroy(&mutexMain);
+    pthread_cond_destroy(&condVarFinished);
+    
 }

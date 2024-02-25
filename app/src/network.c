@@ -1,3 +1,7 @@
+// network.c
+// Internal implementation for networking side of the light sampling application
+// Processes incoming udp packets and returns a reply based on the command received
+
 #include "network.h"
 #include <assert.h>
 #include <stdio.h>
@@ -5,7 +9,6 @@
 #include <time.h>
 #include <pthread.h>
 #include <arpa/inet.h>
-// #include <sys/socket.h>
 #include <unistd.h>
 #include <string.h>
 #include "hal/sampler.h"
@@ -25,8 +28,7 @@ static int socketDescriptor;
 static bool firstMessage = true;
 static char lastMessage[MAX_LEN];
 
-static pthread_t threads[1]; //TODO - fix this (make it not in an array)
-// static pthread_mutex_t mutexHistory;
+static pthread_t thread;
 
 static void* receiveData();
 static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote, unsigned int sin_len);
@@ -47,9 +49,10 @@ void Network_init(pthread_cond_t* stopCondVar)
 
     socketDescriptor = socket(PF_INET, SOCK_DGRAM, 0);
     bind(socketDescriptor, (struct sockaddr*) &sin, sizeof(sin));
-    pthread_create(&threads[0], NULL, receiveData, NULL);
+    pthread_create(&thread, NULL, receiveData, NULL);
 }
 
+// Cleanup
 void Network_cleanup(void)
 {
     printf("network cleanup\n");
@@ -57,10 +60,13 @@ void Network_cleanup(void)
     is_initialized = false;
     isRunning = false;
     close(socketDescriptor);
-    pthread_join(threads[0], NULL);
+    pthread_join(thread, NULL);
     printf("network cleanup done\n");
 }
 
+// main thread loop
+// constantly listening for udp packets
+// constructs a response via processRx
 static void* receiveData()
 {
     assert(is_initialized);
@@ -78,6 +84,7 @@ static void* receiveData()
     pthread_exit(NULL);
 }
 
+// Send a reply to sender based on the incoming command
 static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote, unsigned int sin_len)
 {
     char messageTx[MAX_LEN];
@@ -99,7 +106,6 @@ static void processRx(char* messageRx, int bytesRx, struct sockaddr_in sinRemote
         snprintf(messageTx, MAX_LEN, "# Dips: %d\n", Sampler_getHistoryNumDips());
     }
     else if (strncmp(messageRx, "history", strlen("history")) == 0){
-        // snprintf(messageTx, MAX_LEN, "unsupported command - history\n");
         pthread_mutex_lock(sampleHistoryMutex);
         int historySize = Sampler_getHistorySize();
         double* history = Sampler_getHistory(&historySize);

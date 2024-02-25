@@ -9,6 +9,7 @@
         "string.h": "c",
         "stdlib.h": "c",
         "stdbool.h": "c",
-        "pthread.h": "c"
+        "pthread.h": "c",
+        "time.h": "c"
     }
 }

@@ -45,6 +45,7 @@ long long Sampler_getNumSamplesTaken(void);
 // Get the number of dips measured during the previous complete second.
 int Sampler_getHistoryNumDips(void);
 
+// Returns a reference to the history mutex for outside use
 pthread_mutex_t* Sampler_getHistoryMutexRef(void);
 
 #endif

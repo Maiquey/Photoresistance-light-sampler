@@ -28,7 +28,7 @@
 #define REG_OUTA 0x00
 #define REG_OUTB 0x01
 
-static pthread_t threads[1];
+static pthread_t thread;
 
 static bool is_initialized = false;
 static bool isRunning = true;
@@ -38,28 +38,35 @@ static int currentNumber = 0;
 static void* displayNumber();
 static int initI2cBus(char* bus, int address);
 static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char value);
-// static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr);
 static void writeToFile(const char* filePath, const char* input);
 static void configureLeftDigit(bool isLeft);
+static void runCommand(char* command);
 
-// Begin/end the background thread which samples light levels.
+// initialize bus and registers, 
+// set config pins, 
+// set gpio direction, 
+// spawn thread
 void SigDisplay_init(void)
 {
     assert(!is_initialized);
     is_initialized = true;
 
+    runCommand("config-pin p9_18 i2c");
+    runCommand("config-pin p9_17 i2c");
+    
     i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
     writeI2cReg(i2cFileDesc, REG_DIRA, 0x00);
     writeI2cReg(i2cFileDesc, REG_DIRB, 0x00);
 
-    //TODO - may need to set config-pin p9_18 and 17 to i2c
+    
     writeToFile(LEFT_DIRECTION, "out");
     writeToFile(RIGHT_DIRECTION, "out");
 
-    pthread_create(&threads[0], NULL, displayNumber, NULL);
+    pthread_create(&thread, NULL, displayNumber, NULL);
 
 }
 
+// General Cleanup
 void SigDisplay_cleanup(void)
 {
     assert(is_initialized);
@@ -67,14 +74,9 @@ void SigDisplay_cleanup(void)
     isRunning = false;
     writeToFile(LEFT_VALUE, "0");
     writeToFile(RIGHT_VALUE, "0");
-    pthread_join(threads[0], NULL);
+    pthread_join(thread, NULL);
     close(i2cFileDesc);
 }
-
-// TODO
-// Assume pins already configured for I2C:
-// (bbg)$ config-pin P9_18 i2c
-// (bbg)$ config-pin P9_17 i2c
 
 // From I2C Guide
 static int initI2cBus(char* bus, int address)
@@ -100,25 +102,6 @@ static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char va
         exit(1);
     }
 }
-
-// // From I2C Guide
-// static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr)
-// {
-//     // To read a register, must first write the address
-//     int res = write(i2cFileDesc, &regAddr, sizeof(regAddr));
-//     if (res != sizeof(regAddr)) {
-//         perror("I2C: Unable to write to i2c register.");
-//         exit(1);
-//     }
-//     // Now read the value and return it
-//     char value = 0;
-//     res = read(i2cFileDesc, &value, sizeof(value));
-//     if (res != sizeof(value)) {
-//         perror("I2C: Unable to read from i2c register");
-//         exit(1);
-//     }
-//     return value;
-// }
 
 static void* displayNumber()
 {
@@ -220,4 +203,26 @@ static void configureLeftDigit(bool isLeft)
 void SigDisplay_setNumber(int newValue)
 {
     currentNumber = newValue;
+}
+
+// From Assignment 1
+static void runCommand(char* command)
+{
+    // Execute the shell command (output into pipe)
+    FILE *pipe = popen(command, "r");
+    // Ignore output of the command; but consume it
+    // so we don't get an error when closing the pipe.
+    char buffer[1024];
+    while (!feof(pipe) && !ferror(pipe)) {
+        if (fgets(buffer, sizeof(buffer), pipe) == NULL)
+            break;
+        // printf("--> %s", buffer); // Uncomment for debugging
+    }
+    // Get the exit code from the pipe; non-zero is an error:
+    int exitCode = WEXITSTATUS(pclose(pipe));
+    if (exitCode != 0) {
+        perror("Unable to execute command:");
+        printf(" command: %s\n", command);
+        printf(" exit code: %d\n", exitCode);
+    }
 }

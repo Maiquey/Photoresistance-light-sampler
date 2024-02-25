@@ -7,16 +7,15 @@
 
 #include <stdbool.h>
 
-// Begin/end the background thread which samples light levels.
+// Begin/end the background thread which drives the LED with PWM
+// Also sets necessary config pins
 void PotLed_init(void);
 void PotLed_cleanup(void);
 
-// Must be called once every 1s.
-// Moves the samples that it has been collecting this second into
-// the history, which makes the samples available for reads (below).
+// Interface function for reading the potentiometer
 int PotLed_getPOTReading(void);
 
-// Get the number of samples collected during the previous complete second.
+// Interface function for getting the frequency of the LED
 int PotLed_getFrequency(void);
 
 

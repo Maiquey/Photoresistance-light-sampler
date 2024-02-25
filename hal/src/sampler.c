@@ -38,7 +38,8 @@ static void* swapHistoryPeriodic();
 static double a2dToVoltage(int a2dReading);
 static void outputDataToTerminal();
 
-static pthread_t threads[2];
+static pthread_t samplerThread;
+static pthread_t historyThread;
 pthread_mutex_t mutexHistory;
 
 // Begin/end the background thread which samples light levels.
@@ -52,10 +53,9 @@ void Sampler_init(void)
     avgLightReading = a2dToVoltage(getVoltage1Reading());
 
     //start the thread - will sample light level every 1ms
-    pthread_create(&threads[0], NULL, sampleLightLevels, NULL);
-    pthread_create(&threads[1], NULL, swapHistoryPeriodic, NULL);
+    pthread_create(&samplerThread, NULL, sampleLightLevels, NULL);
+    pthread_create(&historyThread, NULL, swapHistoryPeriodic, NULL);
     printf("init complete\n");
-    // pthread_join(*samplerThread, NULL);
 }
 
 void Sampler_cleanup(void)
@@ -66,8 +66,8 @@ void Sampler_cleanup(void)
     is_initialized = false;
     isRunning = false;
     //join thread
-    pthread_join(threads[0], NULL);
-    pthread_join(threads[1], NULL);
+    pthread_join(samplerThread, NULL);
+    pthread_join(historyThread, NULL);
     printf("sampler cleanup done\n");
 }
 
@@ -85,7 +85,6 @@ void Sampler_moveCurrentDataToHistory(void)
     numDips = 0;
     dipAllowed = true;
     pthread_mutex_unlock(&mutexHistory);
-    // printf("history size: %d\n", historySize);
 }
 
 // Get the number of samples collected during the previous complete second.
@@ -100,7 +99,7 @@ int Sampler_getHistorySize(void)
 // number of elements in the returned array (output-only parameter).
 // The calling code must call free() on the returned pointer.
 // Note: It provides both data and size to ensure consistency.
-double* Sampler_getHistory(int* size) //TODO - check previously int *size parameter - change to static?
+double* Sampler_getHistory(int* size)
 {
     assert(is_initialized);
     double* historyCopy = (double*)malloc((*size) * sizeof(double));
@@ -128,7 +127,8 @@ int Sampler_getHistoryNumDips(void)
     return historyDips;
 }
 
-
+// Sample thread function
+// Continuously samples light level and makes necessary updates to shared data
 static void* sampleLightLevels()
 {
     while (isRunning) {
@@ -155,6 +155,9 @@ static void* sampleLightLevels()
     pthread_exit(NULL);
 }
 
+// history thread function
+// reads the current buffer into history buffer every 1 second
+// also drives the terminal output, timing jitter readings, and 14-sig display updates
 static void* swapHistoryPeriodic()
 {
     long long startTime = getTimeInMs();
@@ -171,7 +174,7 @@ static void* swapHistoryPeriodic()
     pthread_exit(NULL);
 }
 
-// From A2D guide - to be modified for error handling
+// From A2D guide
 static int getVoltage1Reading()
 {
     // Open file
@@ -193,12 +196,13 @@ static int getVoltage1Reading()
     return a2dReading;
 }
 
-
+// Transfers direct a2d reading into bbg voltage reading
 static double a2dToVoltage(int a2dReading)
 {
     return ((double)a2dReading / (double)A2D_MAX_READING) * (double)A2D_VOLTAGE_REF_V;
 }
 
+// Returns a reference to the history mutex for outside use
 pthread_mutex_t* Sampler_getHistoryMutexRef(void)
 {
     return &mutexHistory;
